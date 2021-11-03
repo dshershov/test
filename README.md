@@ -1,3 +1,2 @@
-# testing repository
-some changes for running code pipeline AWS
-another test
+# Churn Predictions tests repository
+some tests for running code pipeline AWS with churn-predictions script

@@ -1,0 +1,8 @@
+version: 0.2
+phases:
+  build:
+    commands:
+      - echo Build started
+      - yum -y update
+      - yum -y install gcc gcc-c++ make
+      - python3 -m pip install -r ./requirements.txt
