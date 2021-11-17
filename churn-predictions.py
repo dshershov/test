@@ -41,6 +41,8 @@ class Defaults:
     mlflow_registered_model_name = 'adp-churn-predictions'
     ecr_image_name = 'ecr_image_name/from_AWS_Account'
     sagemaker_bucket = 'sagemaker_bucket_from_AWS_Account'
+    cloud_map_service_id = 'cloud_map_service_id_from_AWS_Account'
+    cloud_map_instance_id = 'cloud_map_instance_id_from_AWS_Account'
 
 
 def checking_existence_model(client, model_name):
@@ -130,6 +132,9 @@ if __name__ == '__main__':
     parser.add_argument('--execution_role', default=Defaults.execution_role)
     parser.add_argument('--ecr_image_name', default=Defaults.ecr_image_name)
     parser.add_argument('--sagemaker_bucket', default=Defaults.sagemaker_bucket)
+    parser.add_argument('--cloud_map_service_id', default=Defaults.cloud_map_service_id)
+    parser.add_argument('--cloud_map_instance_id', default=Defaults.cloud_map_instance_id)
+
 
     args = parser.parse_args()
 
@@ -148,6 +153,8 @@ if __name__ == '__main__':
     Defaults.execution_role = args.execution_role
     Defaults.ecr_image_name = args.ecr_image_name
     Defaults.sagemaker_bucket = args.sagemaker_bucket
+    Defaults.cloud_map_service_id = args.cloud_map_service_id
+    Defaults.cloud_map_instance_id = args.cloud_map_instance_id
 
     mlflow.set_tracking_uri(Defaults.mlflow_tracking_uri)
     mlflow.set_experiment(Defaults.mlflow_experiment_name)
@@ -163,9 +170,9 @@ if __name__ == '__main__':
         log.info("{0:<15}{1:<15}{2:>8}".format("Predicted", "No Churn", "Churn"))
         log.info("Observed")
         log.info("{0:<15}{1:<2.0f}% ({2:<}){3:>6.0f}% ({4:<})".format("No Churn", tn / (tn + fn) * 100, tn,
-                                                                   fp / (tp + fp) * 100, fp))
+                                                                      fp / (tp + fp) * 100, fp))
         log.info("{0:<16}{1:<1.0f}% ({2:<}){3:>7.0f}% ({4:<}) \n".format("Churn", fn / (tn + fn) * 100, fn,
-                                                                      tp / (tp + fp) * 100, tp))
+                                                                         tp / (tp + fp) * 100, tp))
         scores = cross_val_score(xgb, validate_x, validate_y, cv=5)
         accuracy = round(scores.mean() * 100, 2)
 
@@ -197,5 +204,12 @@ if __name__ == '__main__':
         model_uri = os.path.join(artifact_uri, Defaults.mlflow_experiment_name)
         log.info(f'Run id = {run_id}; artifact_uri = {artifact_uri}; experimentId = {experiment.experiment_id}')
         # create_bucket(Defaults.sagemaker_bucket, Defaults.AWS_region)
-        if os.getenv('USE_KUBERNETES_MODEL') and os.getenv('USE_KUBERNETES_MODEL').lower() == 'Disabled':
+        if os.getenv('USE_KUBERNETES_MODEL') and os.getenv('USE_KUBERNETES_MODEL').lower() == 'disabled':
             deploy(model_uri)
+        else:
+            cloud_map = boto3.client('servicediscovery', region_name=Defaults.AWS_region)
+            current_attributes = cloud_map.get_instance(ServiceId=Defaults.cloud_map_service_id,
+                                                        InstanceId=Defaults.cloud_map_instance_id)['Instance']['Attributes']
+            current_attributes['attributes_uri'] = artifact_uri
+            cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceId=Defaults.cloud_map_instance_id,
+                                        Attributes=current_attributes)
