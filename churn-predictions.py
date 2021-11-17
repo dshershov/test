@@ -197,4 +197,5 @@ if __name__ == '__main__':
         model_uri = os.path.join(artifact_uri, Defaults.mlflow_experiment_name)
         log.info(f'Run id = {run_id}; artifact_uri = {artifact_uri}; experimentId = {experiment.experiment_id}')
         # create_bucket(Defaults.sagemaker_bucket, Defaults.AWS_region)
-        deploy(model_uri)
+        if os.getenv('USE_SAGEMAKER_ENDPOINT') and os.getenv('USE_SAGEMAKER_ENDPOINT').lower() == 'true':
+            deploy(model_uri)
