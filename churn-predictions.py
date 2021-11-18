@@ -42,7 +42,8 @@ class Defaults:
     ecr_image_name = 'ecr_image_name/from_AWS_Account'
     sagemaker_bucket = 'sagemaker_bucket_from_AWS_Account'
     cloud_map_service_id = 'cloud_map_service_id_from_AWS_Account'
-    cloud_map_instance_id = 'cloud_map_instance_id_from_AWS_Account'
+    cloud_map_instance_name = 'cloud_map_instance_id_from_AWS_Account'
+    cloud_map_attribute_name = 'artifacts_uri'
 
 
 def checking_existence_model(client, model_name):
@@ -133,8 +134,8 @@ if __name__ == '__main__':
     parser.add_argument('--ecr_image_name', default=Defaults.ecr_image_name)
     parser.add_argument('--sagemaker_bucket', default=Defaults.sagemaker_bucket)
     parser.add_argument('--cloud_map_service_id', default=Defaults.cloud_map_service_id)
-    parser.add_argument('--cloud_map_instance_id', default=Defaults.cloud_map_instance_id)
-
+    parser.add_argument('--cloud_map_instance_name', default=Defaults.cloud_map_instance_name)
+    parser.add_argument('--cloud_map_attribute_name', default=Defaults.cloud_map_attribute_name)
 
     args = parser.parse_args()
 
@@ -154,7 +155,8 @@ if __name__ == '__main__':
     Defaults.ecr_image_name = args.ecr_image_name
     Defaults.sagemaker_bucket = args.sagemaker_bucket
     Defaults.cloud_map_service_id = args.cloud_map_service_id
-    Defaults.cloud_map_instance_id = args.cloud_map_instance_id
+    Defaults.cloud_map_instance_name = args.cloud_map_instance_name
+    Defaults.cloud_map_attribute_name = args.cloud_map_attribute_name
 
     mlflow.set_tracking_uri(Defaults.mlflow_tracking_uri)
     mlflow.set_experiment(Defaults.mlflow_experiment_name)
@@ -209,7 +211,7 @@ if __name__ == '__main__':
         else:
             cloud_map = boto3.client('servicediscovery', region_name=Defaults.AWS_region)
             current_attributes = cloud_map.get_instance(ServiceId=Defaults.cloud_map_service_id,
-                                                        InstanceId=Defaults.cloud_map_instance_id)['Instance']['Attributes']
-            current_attributes['attributes_uri'] = artifact_uri
-            cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceId=Defaults.cloud_map_instance_id,
+                                                        InstanceId=Defaults.cloud_map_instance_name)['Instance']['Attributes']
+            current_attributes[Defaults.cloud_map_attribute_name] = artifact_uri
+            cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceName=Defaults.cloud_map_instance_name,
                                         Attributes=current_attributes)
