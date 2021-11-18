@@ -213,5 +213,5 @@ if __name__ == '__main__':
             current_attributes = cloud_map.get_instance(ServiceId=Defaults.cloud_map_service_id,
                                                         InstanceId=Defaults.cloud_map_instance_name)['Instance']['Attributes']
             current_attributes[Defaults.cloud_map_attribute_name] = artifact_uri
-            cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceName=Defaults.cloud_map_instance_name,
+            cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceId=Defaults.cloud_map_instance_name,
                                         Attributes=current_attributes)
