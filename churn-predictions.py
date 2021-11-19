@@ -100,7 +100,7 @@ def train(train_x, train_y):
     return xgb
 
 
-def deploy(model_uri):
+def deploy_to_sagemaker(model_uri):
     aws_id = boto3.client("sts").get_caller_identity()["Account"]
     role_arn = boto3.client('iam').get_role(RoleName=Defaults.execution_role)['Role']['Arn']
     image_url = aws_id + '.dkr.ecr.' + Defaults.AWS_region + '.amazonaws.com/' + Defaults.ecr_image_name + ':' + mlflow.version.VERSION
@@ -115,6 +115,15 @@ def deploy(model_uri):
         instance_type=Defaults.instance_type
     )
 
+
+def deploy_to_kubernetes():
+    cloud_map = boto3.client('servicediscovery', region_name=Defaults.AWS_region)
+    current_attributes = cloud_map.get_instance(ServiceId=Defaults.cloud_map_service_id,
+                                                InstanceId=Defaults.cloud_map_instance_name)['Instance']['Attributes']
+    current_attributes[Defaults.cloud_map_attribute_name] = artifact_uri
+    cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceId=Defaults.cloud_map_instance_name,
+                                Attributes=current_attributes)
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -206,12 +215,10 @@ if __name__ == '__main__':
         model_uri = os.path.join(artifact_uri, Defaults.mlflow_experiment_name)
         log.info(f'Run id = {run_id}; artifact_uri = {artifact_uri}; experimentId = {experiment.experiment_id}')
         # create_bucket(Defaults.sagemaker_bucket, Defaults.AWS_region)
-        if os.getenv('USE_KUBERNETES_MODEL') and os.getenv('USE_KUBERNETES_MODEL').lower() == 'disabled':
-            deploy(model_uri)
+        if os.getenv('USE_SAGEMAKER_MODEL') and os.getenv('USE_SAGEMAKER_MODEL').lower() == 'enabled':
+            deploy_to_sagemaker(model_uri)
+        elif os.getenv('USE_KUBERNETES_MODEL') and os.getenv('USE_KUBERNETES_MODEL').lower() == 'enabled':
+            deploy_to_kubernetes()
         else:
-            cloud_map = boto3.client('servicediscovery', region_name=Defaults.AWS_region)
-            current_attributes = cloud_map.get_instance(ServiceId=Defaults.cloud_map_service_id,
-                                                        InstanceId=Defaults.cloud_map_instance_name)['Instance']['Attributes']
-            current_attributes[Defaults.cloud_map_attribute_name] = artifact_uri
-            cloud_map.register_instance(ServiceId=Defaults.cloud_map_service_id, InstanceId=Defaults.cloud_map_instance_name,
-                                        Attributes=current_attributes)
+            deploy_to_sagemaker(model_uri)
+            deploy_to_kubernetes()
